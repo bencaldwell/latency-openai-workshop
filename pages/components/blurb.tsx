@@ -12,6 +12,10 @@ interface Props {
   blurbsFinishedGenerating: boolean;
 }
 
+type ScanResponse = {
+  scanId: string;
+};
+
 export default function Blurb({ generatingPost, blurbsFinishedGenerating }: Props) {
   const [plagiarismLoading, setPlagiarismLoading] = useState<boolean>(false);
   const [plagiarisedScore, setPlagiarisedScore] = useState<number>(0);
@@ -20,29 +24,18 @@ export default function Blurb({ generatingPost, blurbsFinishedGenerating }: Prop
   const checkPlagiarism = async (streamedBlurb: string) => {
     setPlagiarismLoading(true);
 
-    const scanId = "f1d0db14-c4d2-487d-9615-5a1b8ef6f4c2";
-    const completedScanWebhookResponse = await fetch(
-      "/api/copy-leaks/completed/f1d0db14-c4d2-487d-9615-5a1b8ef6f4c2",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(dummyCompletedScanWebhookResponse),
-      }
-    );
+    // Send blurb to be scanned for plagiarism
+    const scanResponse = await fetch("/api/plagiarismCheck", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text: streamedBlurb,
+      }),
+    });
 
-    const completedExportResultsWebhookResponse = await fetch(
-      "/api/copy-leaks/export/f1d0db14-c4d2-487d-9615-5a1b8ef6f4c2/7e514eabb3",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(dummyCompletedExportResultsWebhookResponse),
-      }
-    );
-
+    const scanId = ((await scanResponse.json()) as ScanResponse).scanId;
     const firebase = new FirebaseWrapper();
     const scanRef = firebase.getScanReference(scanId);
     onValue(scanRef, async (scanRecord: any) => {
@@ -52,6 +45,7 @@ export default function Blurb({ generatingPost, blurbsFinishedGenerating }: Prop
         handleScan(streamedBlurb, scan);
       }
     });
+    setPlagiarismLoading(false);
   };
 
   function handleScan(text: string, scan: any) {
