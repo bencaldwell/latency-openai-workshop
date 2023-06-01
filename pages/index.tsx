@@ -3,15 +3,18 @@ import { useRef, useCallback, useState } from "react";
 import Blurb from "./components/blurb";
 
 export default function Home() {
-  const blurbRef = useRef("");
+  const [blurbsFinishedGenerating, setBlurbsFinishedGenerating] = useState<boolean>(false);
+  const [context, setContext] = useState("");
   const [generatingPosts, setGeneratingPosts] = useState("");
+  
   const prompt = `Generate 3 tweets and clearly labeled "1." , "2." and "3.". 
                   Follow the following criteria:
-                  1. Each tweet should be based on this context: ${blurbRef.current}
+                  1. Each tweet should be based on this context: ${context}
                   2. Each tweet will have short sentences that are found in Twitter posts. 
                   3. Each tweet will be strictly less than 280 tokens including spaces, punctuation, emojis and hashtags`;
 
   const generateBlurb = useCallback(async () => {
+    setBlurbsFinishedGenerating(false);
     let done = false;
     let firstPost = false;
     let streamedText = "";
@@ -45,7 +48,8 @@ export default function Home() {
         firstPost = streamedText.includes("1.");
       }
     }
-  }, [blurbRef.current]);
+    setBlurbsFinishedGenerating(true);
+  }, [context]);
   return (
     <Stack
       component="main"
@@ -68,21 +72,29 @@ export default function Home() {
         fullWidth
         minRows={4}
         onChange={(e) => {
-          blurbRef.current = e.target.value;
+          setContext(e.target.value);
         }}
         sx={{ "& textarea": { boxShadow: "none !important" } }}
         placeholder="Key words on what you would like your blurb to be about"></TextField>
       <Button onClick={generateBlurb}>Generate Blurb</Button>
-      {generatingPosts &&
-        generatingPosts
-          .substring(generatingPosts.indexOf("1.") + 3)
-          .split(/2\.|3\./)
-          .map((generatingPost, index) => {
-            return (
-              <Blurb key={index} generatingPost={generatingPost} />
-            );
-          })}
-
-    </Stack>
+      {generatingPosts && (
+        <>
+          <Stack direction="row-reverse" width="100%">
+            <Typography width="12em" textAlign="center">
+              Plagiarism Score
+            </Typography>
+          </Stack>
+          {generatingPosts
+            .substring(generatingPosts.indexOf("1.") + 3)
+            .split(/2\.|3\./)
+            .map((generatingPost, index) => {
+              return (
+                <Blurb key={index} generatingPost={generatingPost} blurbsFinishedGenerating={blurbsFinishedGenerating}></Blurb>
+              );
+            })}
+        </>
+      )
+      }
+    </Stack >
   );
 }
